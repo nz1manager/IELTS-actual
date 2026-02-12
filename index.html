@@ -434,12 +434,9 @@ async function saveProfile(profileData) {
     loadingEl.classList.remove('hidden');
 
     try {
-        // LocalStorage dan yoki URL dan ID ni olish
-        const userId = localStorage.getItem(STORAGE_USER_ID_KEY) || new URLSearchParams(window.location.search).get('id');
-
+        const userId = localStorage.getItem(STORAGE_USER_ID_KEY);
         if (!userId) throw new Error('User ID not found. Please log in again.');
 
-        // Backend kutyotgan formatga o'giramiz (snake_case)
         const payload = {
             id: userId,
             first_name: profileData.firstName,
@@ -453,9 +450,19 @@ async function saveProfile(profileData) {
             body: JSON.stringify(payload)
         });
 
+        // Ma'lumotlarni saqlaymiz
         localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(profileData));
+        localStorage.setItem(STORAGE_AUTH_KEY, 'true');
+
+        // Modalni yopamiz
         document.getElementById('profile-modal').classList.add('hidden');
+        
+        // MUHIM: 404 xatosini oldini olish uchun /dashboard ga emas, 
+        // shunchaki dashboard view-sini ko'rsatamiz
         showView('dashboard');
+        
+        // URL'ni tozalab qo'yamiz
+        window.history.replaceState({}, document.title, window.location.pathname);
         
     } catch (error) {
         errorEl.textContent = error.message;
@@ -465,6 +472,7 @@ async function saveProfile(profileData) {
         loadingEl.classList.add('hidden');
     }
 }
+
 
 function updateDashboardWelcome() {
     const welcomeEl = document.getElementById('dashboard-welcome');
