@@ -481,30 +481,27 @@ async function renderAdminTable() {
 
 // 6. AUTH TEKSHIRISH (LOGIN VA REDIRECT)
 function checkAuth() {
-    // URL dan parametrlarni olish
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('id');
     const loginSuccess = urlParams.get('login') === 'success';
-    const isNew = urlParams.get('isNew') === 'true';
 
     if (userId && loginSuccess) {
-        // Ma'lumotlarni saqlash
-        localStorage.setItem(STORAGE_USER_ID_KEY, userId);
-        localStorage.setItem(STORAGE_AUTH_KEY, 'true');
+        localStorage.setItem('ielts_user_id', userId);
+        localStorage.setItem('ielts_is_logged_in', 'true');
         
-        // MUHIM: URL-ni sub-papkani (IELTS-platform) o'chirib yubormasdan tozalash
+        // URL-ni tozalash (sub-papkani saqlab qoladi)
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
         
         showView('dashboard');
-        
-        if (isNew) {
+        if (urlParams.get('isNew') === 'true') {
             document.getElementById('profile-modal').classList.remove('hidden');
         }
-    } else if (localStorage.getItem(STORAGE_AUTH_KEY) === 'true') {
+    } else if (localStorage.getItem('ielts_is_logged_in') === 'true') {
         showView('dashboard');
     }
 }
+
 
 // 7. EVENT LISTENERS (TUGMALAR)
 document.addEventListener('DOMContentLoaded', () => {
@@ -533,9 +530,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 8. LOGOUT FUNKSIYASI
+
 function logout() {
     localStorage.clear();
-    // Sub-papkaga qaytish
+    // Sub-papkani yo'qotmaslik uchun shunday yoziladi
     window.location.href = window.location.origin + window.location.pathname;
 }
 
