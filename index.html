@@ -378,32 +378,51 @@
     </div>
 
     <script>
+// 1. KONFIGURATSIYA
 const SERVER_URL = 'https://ielts-backend-5b7q.onrender.com';
 const STORAGE_USER_ID_KEY = 'ielts_user_id';
 const STORAGE_AUTH_KEY = 'ielts_is_logged_in';
 
+// Lucide ikonkalarni ishga tushirish
 lucide.createIcons();
 
+// 2. API BILAN ISHLASH (STANDART FUNKSIYA)
 async function apiRequest(endpoint, method = 'GET', body = null) {
     const options = {
         method,
         headers: { 'Content-Type': 'application/json' }
     };
     if (body) options.body = JSON.stringify(body);
-    const response = await fetch(`${SERVER_URL}${endpoint}`, options);
-    return await response.json();
+    
+    try {
+        const response = await fetch(`${SERVER_URL}${endpoint}`, options);
+        return await response.json();
+    } catch (error) {
+        console.error("API xatosi:", error);
+        throw error;
+    }
 }
 
+// 3. SAHIFALARNI ALMASHTIRISH (VIEW MANAGEMENT)
 function showView(viewId) {
+    // Barcha seksiyalarni yashirish
     document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden-view'));
+    
+    // Kerakli seksiyani ko'rsatish
     const target = document.getElementById(`view-${viewId}`);
     if (target) target.classList.remove('hidden-view');
     
+    // Logout tugmasini faqat home'da yashirish
     document.getElementById('logoutBtn').classList.toggle('hidden', viewId === 'home');
+    
+    // Agar admin bo'lsa, jadvalni yuklash
     if (viewId === 'admin') renderAdminTable();
+    
+    // Ikonkalarni qayta chizish
     lucide.createIcons();
 }
 
+// 4. PROFILNI SAQLASH (SAVE PROFILE)
 async function saveProfile() {
     const profileData = {
         id: localStorage.getItem(STORAGE_USER_ID_KEY),
@@ -414,7 +433,7 @@ async function saveProfile() {
     };
 
     if (!profileData.id || !profileData.first_name || !profileData.phone) {
-        return alert('Iltimos, ism va telefon raqamingizni kiriting');
+        return alert('Iltimos, ism va telefon raqamingizni to\'liq kiriting!');
     }
 
     const btn = document.getElementById('save-profile-btn');
@@ -426,50 +445,59 @@ async function saveProfile() {
             localStorage.setItem(STORAGE_AUTH_KEY, 'true');
             document.getElementById('profile-modal').classList.add('hidden');
             showView('dashboard');
-            document.getElementById('dashboard-welcome').innerText = `Welcome, ${res.user.first_name}! 👋`;
+            document.getElementById('dashboard-welcome').innerText = `Welcome, ${profileData.first_name}! 👋`;
         }
     } catch (e) {
-        alert('Profilni saqlashda xatolik yuz berdi');
+        alert('Profilni saqlashda xatolik yuz berdi. Serverni tekshiring.');
     } finally {
         btn.disabled = false;
     }
 }
 
+// 5. ADMIN PANELNI TO'LDIRISH
 async function renderAdminTable() {
     const tbody = document.getElementById('admin-user-list');
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Yuklanmoqda...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6">Yuklanmoqda...</td></tr>';
+    
     try {
         const res = await apiRequest('/api/users');
-        if (res.users) {
+        if (res.success && res.users) {
             tbody.innerHTML = res.users.map(u => `
-                <tr class="border-b border-white/5">
-                    <td class="px-8 py-4">${u.first_name} ${u.last_name}<br><span class="text-xs text-gray-500">${u.email}</span></td>
-                    <td class="px-8 py-4">${u.group_name || 'N/A'}</td>
-                    <td class="px-8 py-4">${u.phone || '—'}</td>
-                    <td class="px-8 py-4">${u.is_profile_complete ? '✅' : '⏳'}</td>
+                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td class="px-8 py-4">
+                        <div class="font-bold">${u.first_name} ${u.last_name}</div>
+                        <div class="text-xs text-gray-500">${u.email}</div>
+                    </td>
+                    <td class="px-8 py-4 text-sm">${u.group_name || 'N/A'}</td>
+                    <td class="px-8 py-4 text-sm">${u.phone || '—'}</td>
+                    <td class="px-8 py-4 text-center">${u.is_profile_complete ? '✅' : '⏳'}</td>
                 </tr>
             `).join('');
         }
     } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-400">Xatolik yuz berdi</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-red-400">Ma\'lumotlarni yuklashda xato!</td></tr>';
     }
 }
 
+// 6. AUTH TEKSHIRISH (LOGIN VA REDIRECT)
 function checkAuth() {
-    // URL parametrlari (GitHub Pages xatolarini chetlab o'tish uchun)
+    // URL dan parametrlarni olish
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('id');
-    const isNew = urlParams.get('isNew') === 'true';
     const loginSuccess = urlParams.get('login') === 'success';
+    const isNew = urlParams.get('isNew') === 'true';
 
     if (userId && loginSuccess) {
+        // Ma'lumotlarni saqlash
         localStorage.setItem(STORAGE_USER_ID_KEY, userId);
         localStorage.setItem(STORAGE_AUTH_KEY, 'true');
         
-        // URL-ni tozalash
-        window.history.replaceState({}, document.title, window.location.pathname);
+        // MUHIM: URL-ni sub-papkani (IELTS-platform) o'chirib yubormasdan tozalash
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
         
         showView('dashboard');
+        
         if (isNew) {
             document.getElementById('profile-modal').classList.remove('hidden');
         }
@@ -478,15 +506,20 @@ function checkAuth() {
     }
 }
 
+// 7. EVENT LISTENERS (TUGMALAR)
 document.addEventListener('DOMContentLoaded', () => {
+    // Kirishni tekshirish
     checkAuth();
     
+    // Profilni saqlash tugmasi
     document.getElementById('save-profile-btn').onclick = saveProfile;
     
+    // Admin panel PIN modalini ochish
     document.getElementById('secret-trigger').onclick = () => {
         document.getElementById('pin-modal').classList.remove('hidden');
     };
 
+    // PIN kodni tekshirish (777777)
     document.getElementById('verify-pin').onclick = () => {
         const pin = Array.from(document.querySelectorAll('#pin-inputs input')).map(i => i.value).join('');
         if (pin === '777777') {
@@ -494,24 +527,18 @@ document.addEventListener('DOMContentLoaded', () => {
             showView('admin');
         } else {
             alert('PIN kod noto\'g\'ri!');
+            document.querySelectorAll('#pin-inputs input').forEach(i => i.value = '');
         }
     };
 });
 
+// 8. LOGOUT FUNKSIYASI
 function logout() {
     localStorage.clear();
-    window.location.href = window.location.pathname;
+    // Sub-papkaga qaytish
+    window.location.href = window.location.origin + window.location.pathname;
 }
 
-<script>
-const SERVER_URL = 'https://ielts-backend-5b7q.onrender.com';
-const STORAGE_USER_ID_KEY = 'ielts_user_id';
-const STORAGE_AUTH_KEY = 'ielts_is_logged_in';
-
-lucide.createIcons();
-
-.reload();
-}
 </script>
 
 </body>
