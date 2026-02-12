@@ -378,185 +378,27 @@
     </div>
 
     <script>
-// ========== CONFIGURATION ==========
-const SERVER_URL = 'https://ielts-backend-5b7q.onrender.com';
-
-// Initialize Lucide icons
-lucide.createIcons();
-
-// ---------- GLOBAL STATE & HELPERS ----------
-const STORAGE_PROFILE_KEY = 'ielts_user_profile';
-const STORAGE_USER_ID_KEY = 'ielts_user_id';
-const STORAGE_AUTH_KEY = 'ielts_is_logged_in'; // To'g'rilandi
-
-// ---------- API UTILITIES ----------
-async function apiRequest(endpoint, options = {}) {
-    const url = `${SERVER_URL}${endpoint}`;
-    try {
-        const response = await fetch(url, {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'API request failed');
-        return data;
-    } catch (error) {
-        console.error(`API Error (${endpoint}):`, error);
-        throw error;
-    }
-}
-
-// ---------- VIEW MANAGEMENT ----------
-const views = ['home', 'dashboard', 'admin'];
-function showView(viewId) {
-    views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden-view'));
-    document.getElementById(`view-${viewId}`).classList.remove('hidden-view');
-    
-    document.getElementById('logoutBtn').classList.toggle('hidden', viewId === 'home');
-    
-    if (viewId === 'dashboard') updateDashboardWelcome();
-    if (viewId === 'admin') renderAdminTable();
-    
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    lucide.createIcons();
-}
-
-// ---------- PROFILE MANAGEMENT ----------
-async function saveProfile(profileData) {
-    const saveBtn = document.getElementById('save-profile-btn');
-    const loadingEl = document.getElementById('profile-save-loading');
-    const errorEl = document.getElementById('profile-error');
-    
-    saveBtn.disabled = true;
-    loadingEl.classList.remove('hidden');
-
-    try {
-        const userId = localStorage.getItem(STORAGE_USER_ID_KEY);
-        if (!userId) throw new Error('User ID not found. Please log in again.');
-
-        const payload = {
-            id: userId,
-            first_name: profileData.firstName,
-            last_name: profileData.lastName,
-            phone: profileData.phone,
-            group_name: profileData.group
-        };
-
-        await apiRequest('/api/profile', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-
-        // Ma'lumotlarni saqlaymiz
-        localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(profileData));
-        localStorage.setItem(STORAGE_AUTH_KEY, 'true');
-
-        // Modalni yopamiz
-        document.getElementById('profile-modal').classList.add('hidden');
-        
-        // MUHIM: 404 xatosini oldini olish uchun /dashboard ga emas, 
-        // shunchaki dashboard view-sini ko'rsatamiz
-        showView('dashboard');
-        
-        // URL'ni tozalab qo'yamiz
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-    } catch (error) {
-        errorEl.textContent = error.message;
-        errorEl.classList.remove('hidden');
-    } finally {
-        saveBtn.disabled = false;
-        loadingEl.classList.add('hidden');
-    }
-}
-
-
-function updateDashboardWelcome() {
-    const welcomeEl = document.getElementById('dashboard-welcome');
-    const profile = JSON.parse(localStorage.getItem(STORAGE_PROFILE_KEY));
-    const urlParams = new URLSearchParams(window.location.search);
-    const nameParam = urlParams.get('name');
-    
-    if (profile && profile.firstName) {
-        welcomeEl.innerHTML = `Welcome, ${profile.firstName}! 👋`;
-    } else if (nameParam) {
-        welcomeEl.innerHTML = `Welcome, ${decodeURIComponent(nameParam)}! 👋`;
-    }
-}
-
-async function renderAdminTable() {
-    const tbody = document.getElementById('admin-user-list');
-    const loadingEl = document.getElementById('admin-loading');
-    const tableContainer = document.getElementById('admin-table-container');
-    
-    loadingEl.classList.remove('hidden');
-    tableContainer.classList.add('hidden');
-
-    try {
-        const response = await apiRequest('/api/users');
-        const users = response.users; // Backend { success: true, users: [] } qaytaradi
-        
-        tbody.innerHTML = users.map(user => `
-            <tr class="hover:bg-white/5 transition-colors">
-                <td class="px-8 py-6">
-                    <div class="font-bold text-gray-200">${user.first_name} ${user.last_name}</div>
-                    <div class="text-xs text-gray-500">${user.email}</div>
-                </td>
-                <td class="px-8 py-6">
-                    <span class="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-xs font-bold">${user.group_name || 'N/A'}</span>
-                </td>
-                <td class="px-8 py-6 text-gray-300 text-sm">${user.phone || '—'}</td>
-                <td class="px-8 py-6">
-                    <div class="flex items-center gap-2 text-xs">
-                        <div class="w-2 h-2 ${user.is_profile_complete ? 'bg-emerald-500' : 'bg-yellow-500'} rounded-full"></div>
-                        ${user.is_profile_complete ? 'Completed' : 'Pending'}
-                    </div>
-                </td>
-            </tr>`).join('');
-        
-        tableContainer.classList.remove('hidden');
-    } catch (error) {
-        document.getElementById('admin-error').textContent = "Bazada ma'lumot yo'q yoki serverda xato.";
-        document.getElementById('admin-error').classList.remove('hidden');
-    } finally {
-        loadingEl.classList.add('hidden');
-        lucide.createIcons();
-    }
-}
-
-function checkAuth() {
-    const params = new URLSearchParams(window.location.search);
-    const isNew = params.get('isNew') === 'true';
-    const userId = params.get('id');
-    const loginSuccess = params.get('login') === 'success';
-
-    if (userId) localStorage.setItem(STORAGE_USER_ID_KEY, userId);
-
-<script>
 const SERVER_URL = 'https://ielts-backend-5b7q.onrender.com';
 const STORAGE_USER_ID_KEY = 'ielts_user_id';
 const STORAGE_AUTH_KEY = 'ielts_is_logged_in';
 
 lucide.createIcons();
 
-// Markazlashgan API so'rov funksiyasi
 async function apiRequest(endpoint, method = 'GET', body = null) {
     const options = {
         method,
         headers: { 'Content-Type': 'application/json' }
     };
     if (body) options.body = JSON.stringify(body);
-    
     const response = await fetch(`${SERVER_URL}${endpoint}`, options);
     return await response.json();
 }
 
 function showView(viewId) {
     document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden-view'));
-    document.getElementById(`view-${viewId}`).classList.remove('hidden-view');
+    const target = document.getElementById(`view-${viewId}`);
+    if (target) target.classList.remove('hidden-view');
+    
     document.getElementById('logoutBtn').classList.toggle('hidden', viewId === 'home');
     if (viewId === 'admin') renderAdminTable();
     lucide.createIcons();
@@ -571,7 +413,9 @@ async function saveProfile() {
         group_name: document.getElementById('profile-group').value
     };
 
-    if (!profileData.id || !profileData.first_name || !profileData.phone) return alert('Please fill required fields');
+    if (!profileData.id || !profileData.first_name || !profileData.phone) {
+        return alert('Iltimos, ism va telefon raqamingizni kiriting');
+    }
 
     const btn = document.getElementById('save-profile-btn');
     btn.disabled = true;
@@ -585,7 +429,7 @@ async function saveProfile() {
             document.getElementById('dashboard-welcome').innerText = `Welcome, ${res.user.first_name}! 👋`;
         }
     } catch (e) {
-        alert('Error saving profile');
+        alert('Profilni saqlashda xatolik yuz berdi');
     } finally {
         btn.disabled = false;
     }
@@ -593,36 +437,41 @@ async function saveProfile() {
 
 async function renderAdminTable() {
     const tbody = document.getElementById('admin-user-list');
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Yuklanmoqda...</td></tr>';
     try {
         const res = await apiRequest('/api/users');
-        tbody.innerHTML = res.users.map(u => `
-            <tr class="border-b border-white/5">
-                <td class="px-8 py-4">${u.first_name} ${u.last_name}<br><span class="text-xs text-gray-500">${u.email}</span></td>
-                <td class="px-8 py-4">${u.group_name || 'N/A'}</td>
-                <td class="px-8 py-4">${u.phone || '—'}</td>
-                <td class="px-8 py-4">${u.is_profile_complete ? '✅' : '⏳'}</td>
-            </tr>
-        `).join('');
+        if (res.users) {
+            tbody.innerHTML = res.users.map(u => `
+                <tr class="border-b border-white/5">
+                    <td class="px-8 py-4">${u.first_name} ${u.last_name}<br><span class="text-xs text-gray-500">${u.email}</span></td>
+                    <td class="px-8 py-4">${u.group_name || 'N/A'}</td>
+                    <td class="px-8 py-4">${u.phone || '—'}</td>
+                    <td class="px-8 py-4">${u.is_profile_complete ? '✅' : '⏳'}</td>
+                </tr>
+            `).join('');
+        }
     } catch (e) {
-        console.error('Admin fetch error');
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-400">Xatolik yuz berdi</td></tr>';
     }
 }
 
 function checkAuth() {
-    const params = new URLSearchParams(window.location.search);
-    const userId = params.get('id');
-    const isNew = params.get('isNew') === 'true';
+    // URL parametrlari (GitHub Pages xatolarini chetlab o'tish uchun)
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
+    const isNew = urlParams.get('isNew') === 'true';
+    const loginSuccess = urlParams.get('login') === 'success';
 
-    if (userId) {
+    if (userId && loginSuccess) {
         localStorage.setItem(STORAGE_USER_ID_KEY, userId);
         localStorage.setItem(STORAGE_AUTH_KEY, 'true');
+        
+        // URL-ni tozalash
         window.history.replaceState({}, document.title, window.location.pathname);
         
+        showView('dashboard');
         if (isNew) {
-            showView('dashboard');
             document.getElementById('profile-modal').classList.remove('hidden');
-        } else {
-            showView('dashboard');
         }
     } else if (localStorage.getItem(STORAGE_AUTH_KEY) === 'true') {
         showView('dashboard');
@@ -631,22 +480,37 @@ function checkAuth() {
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
+    
     document.getElementById('save-profile-btn').onclick = saveProfile;
-    document.getElementById('secret-trigger').onclick = () => document.getElementById('pin-modal').classList.remove('hidden');
+    
+    document.getElementById('secret-trigger').onclick = () => {
+        document.getElementById('pin-modal').classList.remove('hidden');
+    };
+
     document.getElementById('verify-pin').onclick = () => {
         const pin = Array.from(document.querySelectorAll('#pin-inputs input')).map(i => i.value).join('');
         if (pin === '777777') {
             document.getElementById('pin-modal').classList.add('hidden');
             showView('admin');
         } else {
-            alert('Wrong PIN');
+            alert('PIN kod noto\'g\'ri!');
         }
     };
 });
 
 function logout() {
     localStorage.clear();
-    location.reload();
+    window.location.href = window.location.pathname;
+}
+
+<script>
+const SERVER_URL = 'https://ielts-backend-5b7q.onrender.com';
+const STORAGE_USER_ID_KEY = 'ielts_user_id';
+const STORAGE_AUTH_KEY = 'ielts_is_logged_in';
+
+lucide.createIcons();
+
+.reload();
 }
 </script>
 
