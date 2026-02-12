@@ -529,18 +529,21 @@ function checkAuth() {
 
     if (loginSuccess) {
         localStorage.setItem(STORAGE_AUTH_KEY, 'true');
+        // 404 xatosini oldini olish uchun asosiy dashboard ko'rinishini ochamiz
+        showView('dashboard'); 
+        
         if (isNew) {
-            showView('home');
+            // Agar yangi foydalanuvchi bo'lsa, dashboard ustidan profilni to'ldirish oynasini chiqaramiz
             document.getElementById('profile-modal').classList.remove('hidden');
-        } else {
-            showView('dashboard');
         }
-        // URL tozalash
+        
+        // URL'dagi login=success kabi ortiqcha belgilarni tozalaymiz
         window.history.replaceState({}, document.title, window.location.pathname);
     } else if (localStorage.getItem(STORAGE_AUTH_KEY) === 'true') {
         showView('dashboard');
     }
 }
+
 
 function logout() {
     localStorage.clear();
