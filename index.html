@@ -85,6 +85,21 @@
             border-color: #818cf8;
             background: rgba(129, 140, 248, 0.1);
         }
+
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #818cf8;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -242,11 +257,15 @@
                 <div class="glass px-4 py-2 rounded-xl text-xs font-mono text-gray-400">ACCESS: GRANTED</div>
             </div>
 
-            <div class="glass rounded-3xl overflow-hidden">
+            <div id="admin-loading" class="text-center py-12 hidden">
+                <div class="loading-spinner"></div>
+                <p class="text-gray-400 mt-4">Loading user data...</p>
+            </div>
+
+            <div class="glass rounded-3xl overflow-hidden" id="admin-table-container">
                 <table class="w-full text-left">
                     <thead class="bg-white/5 border-b border-white/10 text-gray-400 text-xs uppercase tracking-widest">
                         <tr>
-                            <!-- NEW HEADERS: Full Name, Group, Phone, Status -->
                             <th class="px-8 py-6">Full Name</th>
                             <th class="px-8 py-6">Group</th>
                             <th class="px-8 py-6">Phone</th>
@@ -254,10 +273,11 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-white/5" id="admin-user-list">
-                        <!-- DYNAMIC DATA FROM LOCALSTORAGE / MOCK ARRAY -->
+                        <!-- DYNAMIC DATA FROM BACKEND -->
                     </tbody>
                 </table>
             </div>
+            <p id="admin-error" class="text-red-400 text-sm mt-4 hidden"></p>
         </section>
     </main>
 
@@ -342,318 +362,219 @@
                     </div>
                 </div>
 
+                <div id="profile-save-loading" class="hidden text-center py-2">
+                    <div class="loading-spinner" style="width: 30px; height: 30px;"></div>
+                    <p class="text-gray-400 text-xs mt-2">Saving profile...</p>
+                </div>
+
                 <button id="save-profile-btn" class="w-full mt-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2">
                     <i data-lucide="check-circle" class="w-5 h-5"></i>
                     Save Profile
                 </button>
-                <p class="text-center text-xs text-gray-500 mt-4">Your data is securely stored locally</p>
+                <p id="profile-error" class="text-center text-xs text-red-400 mt-2 hidden"></p>
+                <p class="text-center text-xs text-gray-500 mt-4">Your data is synced with our secure servers</p>
             </div>
         </div>
     </div>
 
     <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
+// ========== CONFIGURATION ==========
+const SERVER_URL = 'https://ielts-backend-5b7q.onrender.com';
 
-        // ---------- GLOBAL STATE & HELPERS ----------
-        const STORAGE_PROFILE_KEY = 'ielts_user_profile';
-        const STORAGE_AUTH_KEY = 'isAuthenticated';
+// Initialize Lucide icons
+lucide.createIcons();
 
-        // Default mock data for admin view (fallback if no profile exists)
-        const mockUsers = [
-            { firstName: 'Alice', lastName: 'Johnson', phone: '+1 555 234 5678', group: 'Academic 8.5', status: 'Active' },
-            { firstName: 'Bob', lastName: 'Smith', phone: '+44 20 7946 0123', group: 'General 7.5', status: 'In Review' },
-            { firstName: 'Maria', lastName: 'Garcia', phone: '+34 612 345 678', group: 'Academic 8.0', status: 'Active' },
-        ];
+// ---------- GLOBAL STATE & HELPERS ----------
+const STORAGE_PROFILE_KEY = 'ielts_user_profile';
+const STORAGE_USER_ID_KEY = 'ielts_user_id';
+const STORAGE_AUTH_KEY = 'ielts_is_logged_in'; // To'g'rilandi
 
-        // ---------- VIEW MANAGEMENT ----------
-        const views = ['home', 'dashboard', 'admin'];
-        function showView(viewId) {
-            views.forEach(v => {
-                document.getElementById(`view-${v}`).classList.add('hidden-view');
-            });
-            document.getElementById(`view-${viewId}`).classList.remove('hidden-view');
-            
-            // UI adjustments
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) logoutBtn.classList.toggle('hidden', viewId === 'home');
-            
-            // If dashboard shown, update welcome message with first name
-            if (viewId === 'dashboard') {
-                updateDashboardWelcome();
+// ---------- API UTILITIES ----------
+async function apiRequest(endpoint, options = {}) {
+    const url = `${SERVER_URL}${endpoint}`;
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
             }
-            // If admin shown, populate table with localStorage data + mocks
-            if (viewId === 'admin') {
-                renderAdminTable();
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // ---------- PROFILE SAVE / RETRIEVE ----------
-        function getUserProfile() {
-            const stored = localStorage.getItem(STORAGE_PROFILE_KEY);
-            if (stored) {
-                try {
-                    return JSON.parse(stored);
-                } catch (e) {
-                    return null;
-                }
-            }
-            return null;
-        }
-
-        function saveProfile(profileData) {
-            localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(profileData));
-            // Simulate sending to backend
-            console.log('[BACKEND SIM] Profile saved:', profileData);
-        }
-
-        // Check if user is new (no profile) -> show profile modal
-        function checkAndShowProfileModal() {
-            const profile = getUserProfile();
-            if (!profile) {
-                const modal = document.getElementById('profile-modal');
-                if (modal) modal.classList.remove('hidden');
-            } else {
-                // Already has profile, just ensure dashboard shows correct name
-                updateDashboardWelcome();
-            }
-        }
-
-        // Update dashboard heading with first name
-        function updateDashboardWelcome() {
-            const welcomeEl = document.getElementById('dashboard-welcome');
-            if (!welcomeEl) return;
-            const profile = getUserProfile();
-            if (profile && profile.firstName) {
-                welcomeEl.innerHTML = `Welcome, ${profile.firstName}! 👋`;
-            } else {
-                welcomeEl.innerHTML = `Welcome to the Club!`;
-            }
-        }
-
-        // ---------- ADMIN TABLE RENDER (Full Name, Group, Phone, Status) ----------
-        function renderAdminTable() {
-            const tbody = document.getElementById('admin-user-list');
-            if (!tbody) return;
-            
-            // Collect real users from localStorage + mocks (avoid duplicates)
-            const profile = getUserProfile();
-            let usersToDisplay = [];
-
-            // Add real profile if exists
-            if (profile) {
-                usersToDisplay.push({
-                    firstName: profile.firstName || 'Unknown',
-                    lastName: profile.lastName || '',
-                    phone: profile.phone || '—',
-                    group: profile.group || '—',
-                    status: 'Active'
-                });
-            }
-
-            // Add mock users (we can add all mocks, but avoid duplicates for simplicity)
-            // For clean demo, add mocks that are not exactly the same as real user (simple rule)
-            mockUsers.forEach(mock => {
-                // avoid adding if same firstName and lastName? we just push all for demo
-                usersToDisplay.push(mock);
-            });
-
-            // Build table rows
-            tbody.innerHTML = usersToDisplay.map(user => {
-                const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || '—';
-                return `<tr class="hover:bg-white/5 transition-colors">
-                            <td class="px-8 py-6">
-                                <div class="font-bold text-gray-200">${fullName}</div>
-                                <div class="text-xs text-gray-500">${user.email || 'student@ielts.dev'}</div>
-                            </td>
-                            <td class="px-8 py-6">
-                                <span class="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-xs font-bold">${user.group || 'Not assigned'}</span>
-                            </td>
-                            <td class="px-8 py-6 text-gray-300 text-sm">${user.phone || '—'}</td>
-                            <td class="px-8 py-6">
-                                <div class="flex items-center gap-2 text-xs">
-                                    <div class="w-2 h-2 ${user.status === 'Active' ? 'bg-emerald-500' : 'bg-indigo-500'} rounded-full"></div>
-                                    ${user.status || 'Active'}
-                                </div>
-                            </td>
-                        </tr>`;
-            }).join('');
-        }
-
-        // ---------- AUTH & ONBOARDING FLOW ----------
-        function checkAuth() {
-            const params = new URLSearchParams(window.location.search);
-            const isNewLogin = params.get('login') === 'success';
-            
-            // Clear URL param immediately
-            if (isNewLogin) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-
-            // PERSISTENT AUTO-LOGIN: if profile exists, skip login screen and go to dashboard
-            const profile = getUserProfile();
-            if (profile) {
-                // User has profile => authenticated, go to dashboard
-                localStorage.setItem(STORAGE_AUTH_KEY, 'true');
-                showView('dashboard');
-                // If just logged in via google, but profile existed? we still show dashboard (no modal)
-                return;
-            }
-
-            // No profile: if login=success, show home + open profile modal (new user)
-            if (isNewLogin) {
-                localStorage.setItem(STORAGE_AUTH_KEY, 'true'); // mark as auth but no profile yet
-                showView('home'); // stay on home, then modal pops
-                // Open profile modal (glassmorphism)
-                setTimeout(() => {
-                    document.getElementById('profile-modal')?.classList.remove('hidden');
-                }, 100);
-            } else {
-                // No profile, not a fresh login: check if auth flag but no profile? (edge)
-                // Show home by default
-                showView('home');
-            }
-        }
-
-        function logout() {
-            // Keep profile? According to requirements, we don't clear profile. 
-            // Logout just removes auth flag? We'll clear only auth flag and go home.
-            localStorage.removeItem(STORAGE_AUTH_KEY);
-            showView('home');
-        }
-
-        // ---------- EVENT LISTENERS ----------
-        document.addEventListener('DOMContentLoaded', function() {
-            // Re-init icons after dynamic changes
-            lucide.createIcons();
-
-            // ---------- PROFILE MODAL CONTROLS ----------
-            const profileModal = document.getElementById('profile-modal');
-            const closeProfileBtn = document.getElementById('close-profile-modal');
-            const saveProfileBtn = document.getElementById('save-profile-btn');
-
-            // Close modal when X clicked
-            if (closeProfileBtn) {
-                closeProfileBtn.onclick = () => {
-                    profileModal.classList.add('hidden');
-                    // If no profile after close? maybe redirect to home? but we keep modal closable.
-                };
-            }
-
-            // Save profile data
-            if (saveProfileBtn) {
-                saveProfileBtn.onclick = function() {
-                    const firstName = document.getElementById('profile-firstname')?.value.trim();
-                    const lastName = document.getElementById('profile-lastname')?.value.trim();
-                    const phone = document.getElementById('profile-phone')?.value.trim();
-                    const group = document.getElementById('profile-group')?.value.trim();
-
-                    if (!firstName || !lastName || !phone || !group) {
-                        alert('Please fill all fields'); // subtle alert; we can style later
-                        return;
-                    }
-
-                    const profileData = {
-                        firstName,
-                        lastName,
-                        phone,
-                        group,
-                        email: 'student@ielts.dev', // placeholder email
-                        status: 'Active',
-                        updatedAt: new Date().toISOString()
-                    };
-
-                    // Save to localStorage
-                    saveProfile(profileData);
-                    
-                    // Hide modal
-                    profileModal.classList.add('hidden');
-                    
-                    // Redirect to Dashboard
-                    showView('dashboard');
-                    
-                    // Refresh icons
-                    lucide.createIcons();
-                };
-            }
-
-            // ---------- SECRET PIN (777777) - 100% intact ----------
-            const trigger = document.getElementById('secret-trigger');
-            const modal = document.getElementById('pin-modal');
-            const closeBtn = document.getElementById('close-modal');
-            const inputs = document.querySelectorAll('#pin-inputs input');
-            const verifyBtn = document.getElementById('verify-pin');
-            const errorMsg = document.getElementById('pin-error');
-            const SECRET_PIN = '777777';
-
-            if (trigger) {
-                trigger.onclick = () => {
-                    modal.classList.remove('hidden');
-                    if (inputs.length) inputs[0].focus();
-                };
-            }
-
-            if (closeBtn) {
-                closeBtn.onclick = () => modal.classList.add('hidden');
-            }
-
-            // Auto-focus next input
-            inputs.forEach((input, index) => {
-                input.onkeyup = (e) => {
-                    if (e.key >= '0' && e.key <= '9') {
-                        if (index < inputs.length - 1) inputs[index + 1].focus();
-                    } else if (e.key === 'Backspace') {
-                        if (index > 0) inputs[index - 1].focus();
-                    }
-                };
-            });
-
-            if (verifyBtn) {
-                verifyBtn.onclick = () => {
-                    const pin = Array.from(inputs).map(i => i.value).join('');
-                    if (pin === SECRET_PIN) {
-                        modal.classList.add('hidden');
-                        showView('admin');
-                        errorMsg.classList.add('hidden');
-                        inputs.forEach(i => i.value = '');
-                    } else {
-                        errorMsg.classList.remove('hidden');
-                        inputs.forEach(i => i.value = '');
-                        if (inputs.length) inputs[0].focus();
-                    }
-                };
-            }
-
-            // ---------- PERSISTENT SESSION CHECK + ONBOARDING ----------
-            checkAuth();
-
-            // If profile exists but we are on home due to some edge, redirect to dashboard
-            const profileExists = getUserProfile();
-            if (profileExists && !document.getElementById('view-dashboard').classList.contains('hidden-view') === false) {
-                // If current view is not dashboard and profile exists, force dashboard
-                // but avoid override if admin is open
-                if (!document.getElementById('view-admin').classList.contains('hidden-view')) {
-                    // leave admin as is
-                } else {
-                    showView('dashboard');
-                }
-            }
-
-            // make sure icons refresh on any dynamic open
-            lucide.createIcons();
         });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'API request failed');
+        return data;
+    } catch (error) {
+        console.error(`API Error (${endpoint}):`, error);
+        throw error;
+    }
+}
 
-        // re-run lucide after any view changes or modal opens (handled in onclick)
-        // monkey patch showView to refresh icons
-        const originalShowView = showView;
-        window.showView = function(viewId) {
-            originalShowView(viewId);
-            lucide.createIcons();
+// ---------- VIEW MANAGEMENT ----------
+const views = ['home', 'dashboard', 'admin'];
+function showView(viewId) {
+    views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden-view'));
+    document.getElementById(`view-${viewId}`).classList.remove('hidden-view');
+    
+    document.getElementById('logoutBtn').classList.toggle('hidden', viewId === 'home');
+    
+    if (viewId === 'dashboard') updateDashboardWelcome();
+    if (viewId === 'admin') renderAdminTable();
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    lucide.createIcons();
+}
+
+// ---------- PROFILE MANAGEMENT ----------
+async function saveProfile(profileData) {
+    const saveBtn = document.getElementById('save-profile-btn');
+    const loadingEl = document.getElementById('profile-save-loading');
+    const errorEl = document.getElementById('profile-error');
+    
+    saveBtn.disabled = true;
+    loadingEl.classList.remove('hidden');
+
+    try {
+        // LocalStorage dan yoki URL dan ID ni olish
+        const userId = localStorage.getItem(STORAGE_USER_ID_KEY) || new URLSearchParams(window.location.search).get('id');
+
+        if (!userId) throw new Error('User ID not found. Please log in again.');
+
+        // Backend kutyotgan formatga o'giramiz (snake_case)
+        const payload = {
+            id: userId,
+            first_name: profileData.firstName,
+            last_name: profileData.lastName,
+            phone: profileData.phone,
+            group_name: profileData.group
         };
 
-        // expose logout globally
-        window.logout = logout;
+        await apiRequest('/api/profile', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(profileData));
+        document.getElementById('profile-modal').classList.add('hidden');
+        showView('dashboard');
+        
+    } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.classList.remove('hidden');
+    } finally {
+        saveBtn.disabled = false;
+        loadingEl.classList.add('hidden');
+    }
+}
+
+function updateDashboardWelcome() {
+    const welcomeEl = document.getElementById('dashboard-welcome');
+    const profile = JSON.parse(localStorage.getItem(STORAGE_PROFILE_KEY));
+    const urlParams = new URLSearchParams(window.location.search);
+    const nameParam = urlParams.get('name');
+    
+    if (profile && profile.firstName) {
+        welcomeEl.innerHTML = `Welcome, ${profile.firstName}! 👋`;
+    } else if (nameParam) {
+        welcomeEl.innerHTML = `Welcome, ${decodeURIComponent(nameParam)}! 👋`;
+    }
+}
+
+async function renderAdminTable() {
+    const tbody = document.getElementById('admin-user-list');
+    const loadingEl = document.getElementById('admin-loading');
+    const tableContainer = document.getElementById('admin-table-container');
+    
+    loadingEl.classList.remove('hidden');
+    tableContainer.classList.add('hidden');
+
+    try {
+        const response = await apiRequest('/api/users');
+        const users = response.users; // Backend { success: true, users: [] } qaytaradi
+        
+        tbody.innerHTML = users.map(user => `
+            <tr class="hover:bg-white/5 transition-colors">
+                <td class="px-8 py-6">
+                    <div class="font-bold text-gray-200">${user.first_name} ${user.last_name}</div>
+                    <div class="text-xs text-gray-500">${user.email}</div>
+                </td>
+                <td class="px-8 py-6">
+                    <span class="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-xs font-bold">${user.group_name || 'N/A'}</span>
+                </td>
+                <td class="px-8 py-6 text-gray-300 text-sm">${user.phone || '—'}</td>
+                <td class="px-8 py-6">
+                    <div class="flex items-center gap-2 text-xs">
+                        <div class="w-2 h-2 ${user.is_profile_complete ? 'bg-emerald-500' : 'bg-yellow-500'} rounded-full"></div>
+                        ${user.is_profile_complete ? 'Completed' : 'Pending'}
+                    </div>
+                </td>
+            </tr>`).join('');
+        
+        tableContainer.classList.remove('hidden');
+    } catch (error) {
+        document.getElementById('admin-error').textContent = "Bazada ma'lumot yo'q yoki serverda xato.";
+        document.getElementById('admin-error').classList.remove('hidden');
+    } finally {
+        loadingEl.classList.add('hidden');
+        lucide.createIcons();
+    }
+}
+
+function checkAuth() {
+    const params = new URLSearchParams(window.location.search);
+    const isNew = params.get('isNew') === 'true';
+    const userId = params.get('id');
+    const loginSuccess = params.get('login') === 'success';
+
+    if (userId) localStorage.setItem(STORAGE_USER_ID_KEY, userId);
+
+    if (loginSuccess) {
+        localStorage.setItem(STORAGE_AUTH_KEY, 'true');
+        if (isNew) {
+            showView('home');
+            document.getElementById('profile-modal').classList.remove('hidden');
+        } else {
+            showView('dashboard');
+        }
+        // URL tozalash
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (localStorage.getItem(STORAGE_AUTH_KEY) === 'true') {
+        showView('dashboard');
+    }
+}
+
+function logout() {
+    localStorage.clear();
+    window.location.href = window.location.pathname;
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    
+    document.getElementById('save-profile-btn').onclick = () => {
+        const profileData = {
+            firstName: document.getElementById('profile-firstname').value,
+            lastName: document.getElementById('profile-lastname').value,
+            phone: document.getElementById('profile-phone').value,
+            group: document.getElementById('profile-group').value
+        };
+        if (Object.values(profileData).some(v => !v)) return alert('Fill all fields');
+        saveProfile(profileData);
+    };
+
+    // Secret Admin Pin (777777)
+    document.getElementById('secret-trigger').onclick = () => document.getElementById('pin-modal').classList.remove('hidden');
+    document.getElementById('verify-pin').onclick = () => {
+        const pin = Array.from(document.querySelectorAll('#pin-inputs input')).map(i => i.value).join('');
+        if (pin === '777777') {
+            document.getElementById('pin-modal').classList.add('hidden');
+            showView('admin');
+        } else {
+            document.getElementById('pin-error').classList.remove('hidden');
+        }
+    };
+});
+
     </script>
 </body>
 </html>
