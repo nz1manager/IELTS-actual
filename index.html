@@ -59,7 +59,7 @@
             display: none !important;
         }
 
-        input:focus {
+        input:focus, .modal-input:focus {
             outline: none;
             border-color: #818cf8;
             box-shadow: 0 0 15px rgba(129, 140, 248, 0.3);
@@ -73,6 +73,17 @@
 
         .transition-all {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .modal-input {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+        .modal-input:focus {
+            border-color: #818cf8;
+            background: rgba(129, 140, 248, 0.1);
         }
     </style>
 </head>
@@ -196,7 +207,8 @@
                 <div class="w-24 h-24 bg-indigo-600/20 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-pulse">
                     <i data-lucide="rocket" class="text-indigo-400 w-12 h-12"></i>
                 </div>
-                <h1 class="text-5xl font-bold mb-6">Welcome to the Club!</h1>
+                <!-- DYNAMIC WELCOME REPLACED BY JS -->
+                <h1 id="dashboard-welcome" class="text-5xl font-bold mb-6">Welcome to the Club!</h1>
                 <p class="text-2xl text-indigo-400 font-medium mb-4">Thank you for signing up!</p>
                 <p class="text-gray-400 text-lg mb-12">We are currently in final maintenance and launching very soon. Follow us on social media for the official announcement and exclusive early-bird bonuses.</p>
                 
@@ -220,7 +232,7 @@
             </div>
         </section>
 
-        <!-- ADMIN VIEW -->
+        <!-- ADMIN VIEW (UPDATED COLUMNS) -->
         <section id="view-admin" class="container mx-auto px-6 hidden-view">
             <div class="flex justify-between items-center mb-10">
                 <h1 class="text-3xl font-bold flex items-center gap-3">
@@ -234,55 +246,19 @@
                 <table class="w-full text-left">
                     <thead class="bg-white/5 border-b border-white/10 text-gray-400 text-xs uppercase tracking-widest">
                         <tr>
-                            <th class="px-8 py-6">User</th>
-                            <th class="px-8 py-6">Target Band</th>
+                            <!-- NEW HEADERS: Full Name, Group, Phone, Status -->
+                            <th class="px-8 py-6">Full Name</th>
+                            <th class="px-8 py-6">Group</th>
+                            <th class="px-8 py-6">Phone</th>
                             <th class="px-8 py-6">Status</th>
-                            <th class="px-8 py-6">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-white/5" id="admin-user-list">
-                        <!-- Placeholder Rows -->
-                        <tr class="hover:bg-white/5 transition-colors">
-                            <td class="px-8 py-6">
-                                <div class="font-bold text-gray-200">Alice Johnson</div>
-                                <div class="text-xs text-gray-500">alice@example.com</div>
-                            </td>
-                            <td class="px-8 py-6">
-                                <span class="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-xs font-bold">8.5</span>
-                            </td>
-                            <td class="px-8 py-6">
-                                <div class="flex items-center gap-2 text-xs">
-                                    <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                                    Active
-                                </div>
-                            </td>
-                            <td class="px-8 py-6">
-                                <button class="p-2 hover:bg-white/10 rounded-lg text-gray-400"><i data-lucide="more-horizontal" class="w-5 h-5"></i></button>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-white/5 transition-colors">
-                            <td class="px-8 py-6">
-                                <div class="font-bold text-gray-200">Bob Smith</div>
-                                <div class="text-xs text-gray-500">bob@ielts.dev</div>
-                            </td>
-                            <td class="px-8 py-6">
-                                <span class="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-xs font-bold">7.5</span>
-                            </td>
-                            <td class="px-8 py-6">
-                                <div class="flex items-center gap-2 text-xs">
-                                    <div class="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                                    In Review
-                                </div>
-                            </td>
-                            <td class="px-8 py-6">
-                                <button class="p-2 hover:bg-white/10 rounded-lg text-gray-400"><i data-lucide="more-horizontal" class="w-5 h-5"></i></button>
-                            </td>
-                        </tr>
+                        <!-- DYNAMIC DATA FROM LOCALSTORAGE / MOCK ARRAY -->
                     </tbody>
                 </table>
             </div>
         </section>
-
     </main>
 
     <!-- FOOTER -->
@@ -300,7 +276,7 @@
         </div>
     </footer>
 
-    <!-- PIN MODAL -->
+    <!-- SECRET PIN MODAL (intact 777777) -->
     <div id="pin-modal" class="fixed inset-0 z-[100] hidden">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm px-6">
@@ -331,11 +307,66 @@
         </div>
     </div>
 
+    <!-- ========== NEW COMPLETE PROFILE MODAL (Glassmorphism) ========== -->
+    <div id="profile-modal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md px-6">
+            <div class="glass p-10 rounded-[32px] shadow-2xl relative border border-indigo-500/20" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px);">
+                <button id="close-profile-modal" class="absolute top-4 right-4 text-gray-500 hover:text-white">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-br from-indigo-600/30 to-purple-600/30 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-400/30">
+                        <i data-lucide="user-circle" class="text-indigo-400 w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold bg-gradient-to-r from-indigo-200 to-purple-200 bg-clip-text text-transparent">Complete Your Profile</h3>
+                    <p class="text-gray-400 text-sm mt-1">Please provide your details to unlock IELTS Actual.</p>
+                </div>
+                
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-gray-400 mb-2">First Name</label>
+                        <input type="text" id="profile-firstname" placeholder="John" class="modal-input w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:border-indigo-400 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-gray-400 mb-2">Last Name</label>
+                        <input type="text" id="profile-lastname" placeholder="Doe" class="modal-input w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:border-indigo-400 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-gray-400 mb-2">Phone Number</label>
+                        <input type="tel" id="profile-phone" placeholder="+1 234 567 8900" class="modal-input w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:border-indigo-400 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-gray-400 mb-2">Group Name</label>
+                        <input type="text" id="profile-group" placeholder="e.g., IELTS Academic 8.0" class="modal-input w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:border-indigo-400 transition-all">
+                    </div>
+                </div>
+
+                <button id="save-profile-btn" class="w-full mt-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2">
+                    <i data-lucide="check-circle" class="w-5 h-5"></i>
+                    Save Profile
+                </button>
+                <p class="text-center text-xs text-gray-500 mt-4">Your data is securely stored locally</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Initialize Lucide icons
         lucide.createIcons();
 
-        // View Management
+        // ---------- GLOBAL STATE & HELPERS ----------
+        const STORAGE_PROFILE_KEY = 'ielts_user_profile';
+        const STORAGE_AUTH_KEY = 'isAuthenticated';
+
+        // Default mock data for admin view (fallback if no profile exists)
+        const mockUsers = [
+            { firstName: 'Alice', lastName: 'Johnson', phone: '+1 555 234 5678', group: 'Academic 8.5', status: 'Active' },
+            { firstName: 'Bob', lastName: 'Smith', phone: '+44 20 7946 0123', group: 'General 7.5', status: 'In Review' },
+            { firstName: 'Maria', lastName: 'Garcia', phone: '+34 612 345 678', group: 'Academic 8.0', status: 'Active' },
+        ];
+
+        // ---------- VIEW MANAGEMENT ----------
         const views = ['home', 'dashboard', 'admin'];
         function showView(viewId) {
             views.forEach(v => {
@@ -344,71 +375,285 @@
             document.getElementById(`view-${viewId}`).classList.remove('hidden-view');
             
             // UI adjustments
-            document.getElementById('logoutBtn').classList.toggle('hidden', viewId === 'home');
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) logoutBtn.classList.toggle('hidden', viewId === 'home');
+            
+            // If dashboard shown, update welcome message with first name
+            if (viewId === 'dashboard') {
+                updateDashboardWelcome();
+            }
+            // If admin shown, populate table with localStorage data + mocks
+            if (viewId === 'admin') {
+                renderAdminTable();
+            }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // Auth Check
+        // ---------- PROFILE SAVE / RETRIEVE ----------
+        function getUserProfile() {
+            const stored = localStorage.getItem(STORAGE_PROFILE_KEY);
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        function saveProfile(profileData) {
+            localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(profileData));
+            // Simulate sending to backend
+            console.log('[BACKEND SIM] Profile saved:', profileData);
+        }
+
+        // Check if user is new (no profile) -> show profile modal
+        function checkAndShowProfileModal() {
+            const profile = getUserProfile();
+            if (!profile) {
+                const modal = document.getElementById('profile-modal');
+                if (modal) modal.classList.remove('hidden');
+            } else {
+                // Already has profile, just ensure dashboard shows correct name
+                updateDashboardWelcome();
+            }
+        }
+
+        // Update dashboard heading with first name
+        function updateDashboardWelcome() {
+            const welcomeEl = document.getElementById('dashboard-welcome');
+            if (!welcomeEl) return;
+            const profile = getUserProfile();
+            if (profile && profile.firstName) {
+                welcomeEl.innerHTML = `Welcome, ${profile.firstName}! 👋`;
+            } else {
+                welcomeEl.innerHTML = `Welcome to the Club!`;
+            }
+        }
+
+        // ---------- ADMIN TABLE RENDER (Full Name, Group, Phone, Status) ----------
+        function renderAdminTable() {
+            const tbody = document.getElementById('admin-user-list');
+            if (!tbody) return;
+            
+            // Collect real users from localStorage + mocks (avoid duplicates)
+            const profile = getUserProfile();
+            let usersToDisplay = [];
+
+            // Add real profile if exists
+            if (profile) {
+                usersToDisplay.push({
+                    firstName: profile.firstName || 'Unknown',
+                    lastName: profile.lastName || '',
+                    phone: profile.phone || '—',
+                    group: profile.group || '—',
+                    status: 'Active'
+                });
+            }
+
+            // Add mock users (we can add all mocks, but avoid duplicates for simplicity)
+            // For clean demo, add mocks that are not exactly the same as real user (simple rule)
+            mockUsers.forEach(mock => {
+                // avoid adding if same firstName and lastName? we just push all for demo
+                usersToDisplay.push(mock);
+            });
+
+            // Build table rows
+            tbody.innerHTML = usersToDisplay.map(user => {
+                const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || '—';
+                return `<tr class="hover:bg-white/5 transition-colors">
+                            <td class="px-8 py-6">
+                                <div class="font-bold text-gray-200">${fullName}</div>
+                                <div class="text-xs text-gray-500">${user.email || 'student@ielts.dev'}</div>
+                            </td>
+                            <td class="px-8 py-6">
+                                <span class="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-xs font-bold">${user.group || 'Not assigned'}</span>
+                            </td>
+                            <td class="px-8 py-6 text-gray-300 text-sm">${user.phone || '—'}</td>
+                            <td class="px-8 py-6">
+                                <div class="flex items-center gap-2 text-xs">
+                                    <div class="w-2 h-2 ${user.status === 'Active' ? 'bg-emerald-500' : 'bg-indigo-500'} rounded-full"></div>
+                                    ${user.status || 'Active'}
+                                </div>
+                            </td>
+                        </tr>`;
+            }).join('');
+        }
+
+        // ---------- AUTH & ONBOARDING FLOW ----------
         function checkAuth() {
             const params = new URLSearchParams(window.location.search);
-            if (params.get('login') === 'success') {
-                localStorage.setItem('isAuthenticated', 'true');
+            const isNewLogin = params.get('login') === 'success';
+            
+            // Clear URL param immediately
+            if (isNewLogin) {
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
 
-            if (localStorage.getItem('isAuthenticated') === 'true') {
+            // PERSISTENT AUTO-LOGIN: if profile exists, skip login screen and go to dashboard
+            const profile = getUserProfile();
+            if (profile) {
+                // User has profile => authenticated, go to dashboard
+                localStorage.setItem(STORAGE_AUTH_KEY, 'true');
                 showView('dashboard');
+                // If just logged in via google, but profile existed? we still show dashboard (no modal)
+                return;
+            }
+
+            // No profile: if login=success, show home + open profile modal (new user)
+            if (isNewLogin) {
+                localStorage.setItem(STORAGE_AUTH_KEY, 'true'); // mark as auth but no profile yet
+                showView('home'); // stay on home, then modal pops
+                // Open profile modal (glassmorphism)
+                setTimeout(() => {
+                    document.getElementById('profile-modal')?.classList.remove('hidden');
+                }, 100);
+            } else {
+                // No profile, not a fresh login: check if auth flag but no profile? (edge)
+                // Show home by default
+                showView('home');
             }
         }
 
         function logout() {
-            localStorage.removeItem('isAuthenticated');
+            // Keep profile? According to requirements, we don't clear profile. 
+            // Logout just removes auth flag? We'll clear only auth flag and go home.
+            localStorage.removeItem(STORAGE_AUTH_KEY);
             showView('home');
         }
 
-        // Secret PIN Logic
-        const trigger = document.getElementById('secret-trigger');
-        const modal = document.getElementById('pin-modal');
-        const closeBtn = document.getElementById('close-modal');
-        const inputs = document.querySelectorAll('#pin-inputs input');
-        const verifyBtn = document.getElementById('verify-pin');
-        const errorMsg = document.getElementById('pin-error');
-        const SECRET_PIN = '777777';
+        // ---------- EVENT LISTENERS ----------
+        document.addEventListener('DOMContentLoaded', function() {
+            // Re-init icons after dynamic changes
+            lucide.createIcons();
 
-        trigger.onclick = () => {
-            modal.classList.remove('hidden');
-            inputs[0].focus();
-        };
+            // ---------- PROFILE MODAL CONTROLS ----------
+            const profileModal = document.getElementById('profile-modal');
+            const closeProfileBtn = document.getElementById('close-profile-modal');
+            const saveProfileBtn = document.getElementById('save-profile-btn');
 
-        closeBtn.onclick = () => modal.classList.add('hidden');
+            // Close modal when X clicked
+            if (closeProfileBtn) {
+                closeProfileBtn.onclick = () => {
+                    profileModal.classList.add('hidden');
+                    // If no profile after close? maybe redirect to home? but we keep modal closable.
+                };
+            }
 
-        // Auto-focus next input
-        inputs.forEach((input, index) => {
-            input.onkeyup = (e) => {
-                if (e.key >= 0 && e.key <= 9) {
-                    if (index < inputs.length - 1) inputs[index + 1].focus();
-                } else if (e.key === 'Backspace') {
-                    if (index > 0) inputs[index - 1].focus();
+            // Save profile data
+            if (saveProfileBtn) {
+                saveProfileBtn.onclick = function() {
+                    const firstName = document.getElementById('profile-firstname')?.value.trim();
+                    const lastName = document.getElementById('profile-lastname')?.value.trim();
+                    const phone = document.getElementById('profile-phone')?.value.trim();
+                    const group = document.getElementById('profile-group')?.value.trim();
+
+                    if (!firstName || !lastName || !phone || !group) {
+                        alert('Please fill all fields'); // subtle alert; we can style later
+                        return;
+                    }
+
+                    const profileData = {
+                        firstName,
+                        lastName,
+                        phone,
+                        group,
+                        email: 'student@ielts.dev', // placeholder email
+                        status: 'Active',
+                        updatedAt: new Date().toISOString()
+                    };
+
+                    // Save to localStorage
+                    saveProfile(profileData);
+                    
+                    // Hide modal
+                    profileModal.classList.add('hidden');
+                    
+                    // Redirect to Dashboard
+                    showView('dashboard');
+                    
+                    // Refresh icons
+                    lucide.createIcons();
+                };
+            }
+
+            // ---------- SECRET PIN (777777) - 100% intact ----------
+            const trigger = document.getElementById('secret-trigger');
+            const modal = document.getElementById('pin-modal');
+            const closeBtn = document.getElementById('close-modal');
+            const inputs = document.querySelectorAll('#pin-inputs input');
+            const verifyBtn = document.getElementById('verify-pin');
+            const errorMsg = document.getElementById('pin-error');
+            const SECRET_PIN = '777777';
+
+            if (trigger) {
+                trigger.onclick = () => {
+                    modal.classList.remove('hidden');
+                    if (inputs.length) inputs[0].focus();
+                };
+            }
+
+            if (closeBtn) {
+                closeBtn.onclick = () => modal.classList.add('hidden');
+            }
+
+            // Auto-focus next input
+            inputs.forEach((input, index) => {
+                input.onkeyup = (e) => {
+                    if (e.key >= '0' && e.key <= '9') {
+                        if (index < inputs.length - 1) inputs[index + 1].focus();
+                    } else if (e.key === 'Backspace') {
+                        if (index > 0) inputs[index - 1].focus();
+                    }
+                };
+            });
+
+            if (verifyBtn) {
+                verifyBtn.onclick = () => {
+                    const pin = Array.from(inputs).map(i => i.value).join('');
+                    if (pin === SECRET_PIN) {
+                        modal.classList.add('hidden');
+                        showView('admin');
+                        errorMsg.classList.add('hidden');
+                        inputs.forEach(i => i.value = '');
+                    } else {
+                        errorMsg.classList.remove('hidden');
+                        inputs.forEach(i => i.value = '');
+                        if (inputs.length) inputs[0].focus();
+                    }
+                };
+            }
+
+            // ---------- PERSISTENT SESSION CHECK + ONBOARDING ----------
+            checkAuth();
+
+            // If profile exists but we are on home due to some edge, redirect to dashboard
+            const profileExists = getUserProfile();
+            if (profileExists && !document.getElementById('view-dashboard').classList.contains('hidden-view') === false) {
+                // If current view is not dashboard and profile exists, force dashboard
+                // but avoid override if admin is open
+                if (!document.getElementById('view-admin').classList.contains('hidden-view')) {
+                    // leave admin as is
+                } else {
+                    showView('dashboard');
                 }
-            };
+            }
+
+            // make sure icons refresh on any dynamic open
+            lucide.createIcons();
         });
 
-        verifyBtn.onclick = () => {
-            const pin = Array.from(inputs).map(i => i.value).join('');
-            if (pin === SECRET_PIN) {
-                modal.classList.add('hidden');
-                showView('admin');
-                errorMsg.classList.add('hidden');
-                inputs.forEach(i => i.value = '');
-            } else {
-                errorMsg.classList.remove('hidden');
-                inputs.forEach(i => i.value = '');
-                inputs[0].focus();
-            }
+        // re-run lucide after any view changes or modal opens (handled in onclick)
+        // monkey patch showView to refresh icons
+        const originalShowView = showView;
+        window.showView = function(viewId) {
+            originalShowView(viewId);
+            lucide.createIcons();
         };
 
-        // Initialize
-        checkAuth();
+        // expose logout globally
+        window.logout = logout;
     </script>
 </body>
 </html>
