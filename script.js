@@ -4,22 +4,25 @@ const socket = new WebSocket('ws://localhost:3000');
 const display = document.getElementById('coefficient-number');
 
 socket.onmessage = function(event) {
-    try {
-        const rawData = JSON.parse(event.data);
-        const payload = rawData.push?.pub?.data;
+    const raw = event.data;
 
-        if (!payload) return;
-
-        if (payload.eventType === "changeCoefficient") {
-            // "next" ni ko'rsatish tezroq natija beradi
-            display.textContent = payload.next[0].toFixed(2) + "x";
+    // 1. Agar xabarda "next" bo'lsa, JSON.parse qilmasdan raqamni qidiramiz
+    if (raw.includes('"next":[')) {
+        // "next":[1.56] formatidan raqamni qirqib olish (Eng tezkor usul)
+        const parts = raw.split('"next":[');
+        if (parts[1]) {
+            const val = parts[1].split(']')[0];
+            display.textContent = parseFloat(val).toFixed(2) + "x";
             display.style.color = "white";
-        } 
-        else if (payload.eventType === "stopCoefficient") {
-            display.textContent = payload.finalValue.toFixed(2) + "x";
+        }
+    } 
+    // 2. To'xtash xabari kelsa, darhol qizil qilish
+    else if (raw.includes('stopCoefficient')) {
+        const parts = raw.split('"finalValue":');
+        if (parts[1]) {
+            const val = parts[1].split('}')[0];
+            display.textContent = parseFloat(val).toFixed(2) + "x";
             display.style.color = "red";
         }
-    } catch (e) {
-        // Xato bo'lsa indamaymiz (tezlik uchun)
     }
 };
